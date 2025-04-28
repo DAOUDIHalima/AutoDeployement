@@ -9,14 +9,15 @@ terraform {
   }
 }
 
+
 provider "azurerm" {
   features {}
   skip_provider_registration = true
 }
 
 locals {
-  acr_prefix = "halima2" 
-  image_name = "nginx"
+  acr_prefix   = "halima2" 
+  image_name   = "nginx"
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -55,42 +56,41 @@ resource "azurerm_service_plan" "asp" {
 }
 
 resource "azurerm_container_registry" "acr" {
-  name                = local.acr_prefix # Use the local prefix
+  name                = local.acr_prefix
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   sku                 = "Basic"
-  admin_enabled       = false
+  admin_enabled       = true 
 }
 
-resource "azurerm_app_service" "app_service" {
-  name                = "${local.acr_prefix}-webapp" # You can adjust this pattern
+resource "azurerm_linux_web_app" "app_service" {
+  name                = "${local.acr_prefix}-${local.image_name}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  app_service_plan_id = azurerm_service_plan.asp.id
+  service_plan_id     = azurerm_service_plan.asp.id
 
   site_config {
-    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/${local.image_name}:latest"
-    always_on        = true
+    application_stack {
+      docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
+      docker_image_name   = "${local.image_name}:latest"
+    }
+    always_on = true
+  }
+
+  app_settings = {
+    WEBSITES_PORT = "80"    
   }
 
   identity {
     type = "SystemAssigned"
   }
-
-  app_settings = {
-    "DOCKER_REGISTRY_SERVER"   = azurerm_container_registry.acr.login_server
-    "DOCKER_REGISTRY_USERNAME" = ""
-    "DOCKER_REGISTRY_PASSWORD" = ""
-  }
-
   tags = {
     environment = "dev"
     owner       = "your-team"
   }
 }
-
-resource "azurerm_role_assignment" "acr_pull_role" {
+resource "azurerm_role_assignment" "acr_pull_role_app" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
-  principal_id         = azurerm_app_service.app_service.identity[0].principal_id
+  principal_id         = azurerm_linux_web_app.app_service.identity[0].principal_id
 }
