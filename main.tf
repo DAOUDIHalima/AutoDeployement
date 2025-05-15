@@ -73,6 +73,7 @@ resource "azurerm_linux_web_app" "app_service" {
     application_stack {
       docker_registry_url = "https://${azurerm_container_registry.acr.login_server}"
       docker_image_name   = "${local.image_name}:latest"
+      docker_registry_auth_type = "ManagedIdentity"
     }
     always_on = true
   }
