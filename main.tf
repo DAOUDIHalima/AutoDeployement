@@ -59,8 +59,8 @@ resource "azurerm_container_registry" "acr" {
   name                = local.acr_prefix
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  sku                 = "Basic"
-  admin_enabled       = true 
+  sku                 = "standard"
+  admin_enabled       = false 
 }
 
 resource "azurerm_linux_web_app" "app_service" {
